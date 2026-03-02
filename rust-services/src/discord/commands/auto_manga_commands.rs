@@ -33,7 +33,7 @@ impl AutoMangaCommands {
             println!("ไม่พบช่องสำหรับการอัพเดทมังงะในฐานข้อมูล");
             return;
         }
-        println!("channel_ids: {:?}", channel_ids);
+        // println!("channel_ids: {:?}", channel_ids);
 
         // ส่งข้อมูลทุกมังงะ
         for manga in mangas {

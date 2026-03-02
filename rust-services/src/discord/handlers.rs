@@ -12,8 +12,22 @@ pub struct Handlers;
 impl EventHandler for Handlers {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
-            let data_read: tokio::sync::RwLockReadGuard<'_, serenity::prelude::TypeMap> =
-                ctx.data.read().await;
+            // ป้องกัน panic: slash command ต้องมี subcommand
+            if command.data.options.is_empty() {
+                let _ = command
+                    .create_response(
+                        &ctx.http,
+                        CreateInteractionResponse::Message(
+                            CreateInteractionResponseMessage::new()
+                                .content("ไม่พบคำสั่งย่อย กรุณาระบุตัวเลือก")
+                                .ephemeral(true),
+                        ),
+                    )
+                    .await;
+                return;
+            }
+
+            let data_read = ctx.data.read().await;
             let result: Result<(), serenity::Error> = match command.data.name.as_str() {
                 // "user" => commands::user_commands::run(&ctx, &command, &data_read).await,
                 "manga" => commands::manga_commands::run(&ctx, &command, &data_read).await,
@@ -35,11 +49,9 @@ impl EventHandler for Handlers {
                 }
             };
 
-            // จัดการข้อผิดพลาด
+            // จัดการข้อผิดพลาด (ส่งตอบได้เฉพาะเมื่อ command ยังไม่ได้ตอบ)
             if let Err(why) = result {
-                println!("เกิดข้อผิดพลาดในคำสั่ง '{}': {:?}", command.data.name, why);
-
-                // ส่งข้อความแจ้งข้อผิดพลาด
+                eprintln!("เกิดข้อผิดพลาดในคำสั่ง '{}': {:?}", command.data.name, why);
                 let _ = command
                     .create_response(
                         &ctx.http,

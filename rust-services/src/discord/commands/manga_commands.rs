@@ -52,18 +52,25 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
         .data
         .options
         .iter()
-        .find(|opt: &&serenity::all::CommandDataOption| opt.name == "add")
-        .and_then(|opt: &serenity::all::CommandDataOption| match &opt.value {
+        .find(|opt| opt.name == "add")
+        .and_then(|opt| match &opt.value {
             serenity::all::CommandDataOptionValue::SubCommand(sub_opts) => Some(sub_opts),
             _ => None,
         })
-        .and_then(|sub_opts: &Vec<serenity::all::CommandDataOption>| {
-            sub_opts
-                .iter()
-                .find(|opt: &&serenity::all::CommandDataOption| opt.name == "url")
-        })
-        .and_then(|opt: &serenity::all::CommandDataOption| opt.value.as_str())
-        .unwrap_or("ไม่มีข้อความ");
+        .and_then(|sub_opts| sub_opts.iter().find(|opt| opt.name == "url"))
+        .and_then(|opt| opt.value.as_str())
+        .unwrap_or("");
+
+    if url.is_empty() {
+        return show_manga_info_ui(
+            command,
+            ctx,
+            "ข้อมูลไม่ครบ",
+            "กรุณาระบุ URL ของการ์ตูน",
+            Colour::RED,
+        )
+        .await;
+    }
 
     if !url.starts_with("https://") {
         return show_manga_info_ui(
@@ -155,10 +162,14 @@ pub async fn run(
     command: &CommandInteraction,
     _: &serenity::prelude::TypeMap,
 ) -> serenity::Result<()> {
-    let subcommand = command.data.options.first().unwrap();
-    let subcommand_name = &subcommand.name;
+    let subcommand_name = command
+        .data
+        .options
+        .first()
+        .map(|o| o.name.as_str())
+        .unwrap_or("");
 
-    match subcommand_name.as_str() {
+    match subcommand_name {
         "add" => add_manga(ctx, command).await,
         _ => show_manga_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
     }

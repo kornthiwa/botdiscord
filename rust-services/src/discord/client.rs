@@ -18,9 +18,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("บอทพร้อมทำงานแล้ว กำลังเชื่อมต่อกับ Discord...");
 
-    if let Err(why) = client.start().await {
-        println!("เกิดข้อผิดพลาดกับไคลเอนต์: {why:?}");
-    }
+    client.start().await.map_err(|e| {
+        eprintln!("เกิดข้อผิดพลาดกับไคลเอนต์: {e:?}");
+        e
+    })?;
 
     Ok(())
 }

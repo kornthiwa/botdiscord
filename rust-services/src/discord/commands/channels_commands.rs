@@ -53,7 +53,19 @@ pub async fn show_channel_info_ui(
 }
 
 async fn list_channels(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
-    let guild_id = command.guild_id.unwrap();
+    let guild_id = match command.guild_id {
+        Some(id) => id,
+        None => {
+            return show_channel_info_ui(
+                command,
+                ctx,
+                "ไม่รองรับ",
+                "คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น",
+                Colour::RED,
+            )
+            .await;
+        }
+    };
 
     match ChannelsService::get_channels_by_guild(&guild_id.to_string()).await {
         Ok(channels) => {
@@ -97,7 +109,7 @@ async fn list_channels(ctx: &Context, command: &CommandInteraction) -> serenity:
 }
 
 async fn add_channel(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
-    let channel_id = command
+    let channel_id = match command
         .data
         .options
         .iter()
@@ -108,9 +120,33 @@ async fn add_channel(ctx: &Context, command: &CommandInteraction) -> serenity::R
         })
         .and_then(|sub_opts| sub_opts.iter().find(|opt| opt.name == "channel"))
         .and_then(|opt| opt.value.as_channel_id())
-        .unwrap();
+    {
+        Some(id) => id,
+        None => {
+            return show_channel_info_ui(
+                command,
+                ctx,
+                "ข้อมูลไม่ครบ",
+                "กรุณาเลือกช่องที่ต้องการบันทึก",
+                Colour::RED,
+            )
+            .await;
+        }
+    };
 
-    let guild_id = command.guild_id.unwrap();
+    let guild_id = match command.guild_id {
+        Some(id) => id,
+        None => {
+            return show_channel_info_ui(
+                command,
+                ctx,
+                "ไม่รองรับ",
+                "คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น",
+                Colour::RED,
+            )
+            .await;
+        }
+    };
     let guild = ctx.http.get_guild(guild_id).await?;
     let guild_name: String = guild.name;
 
@@ -130,8 +166,7 @@ async fn add_channel(ctx: &Context, command: &CommandInteraction) -> serenity::R
                         .await;
                     }
                 };
-                println!("existing_channels: {:?}", existing_channels);
-                
+
                 let channel_doc: Channel = Channel::new(
                     channel.id.to_string(),
                     guild_id.to_string(),
@@ -217,10 +252,14 @@ pub async fn run(
     command: &CommandInteraction,
     _: &serenity::prelude::TypeMap,
 ) -> serenity::Result<()> {
-    let subcommand = command.data.options.first().unwrap();
-    let subcommand_name = &subcommand.name;
+    let subcommand_name = command
+        .data
+        .options
+        .first()
+        .map(|o| o.name.as_str())
+        .unwrap_or("");
 
-    match subcommand_name.as_str() {
+    match subcommand_name {
         "register" => add_channel(ctx, command).await,
         "list" => list_channels(ctx, command).await,
         _ => show_channel_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
