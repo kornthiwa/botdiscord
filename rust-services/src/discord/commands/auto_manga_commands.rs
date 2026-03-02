@@ -119,8 +119,8 @@ impl AutoMangaCommands {
                             }
                             Err(e) => {
                                 println!(
-                                    "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}",
-                                    manga.title, e
+                                    "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?} (URL: {})",
+                                    manga.title, e, manga.url
                                 );
                             }
                         }

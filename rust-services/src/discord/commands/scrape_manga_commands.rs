@@ -26,15 +26,25 @@ pub async fn scrape_manga_sing_manga(
     let html = response.text().await?;
     let document = Html::parse_document(&html);
 
-    let title_selector = Selector::parse("h1.entry-title").unwrap();
+    // Title: try h1.entry-title, then og:title, then any h1
     let title = document
-        .select(&title_selector)
+        .select(&Selector::parse("h1.entry-title").unwrap())
         .next()
-        .ok_or("ไม่พบชื่อการ์ตูน")?
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_string();
+        .map(|el| el.text().collect::<String>().trim().to_string())
+        .or_else(|| {
+            document
+                .select(&Selector::parse(r##"meta[property="og:title"]"##).unwrap())
+                .next()
+                .and_then(|el| el.value().attr("content").map(String::from))
+        })
+        .or_else(|| {
+            document
+                .select(&Selector::parse("h1").unwrap())
+                .next()
+                .map(|el| el.text().collect::<String>().trim().to_string())
+        })
+        .filter(|s| !s.is_empty())
+        .ok_or("ไม่พบชื่อการ์ตูน")?;
 
     let image_selector = Selector::parse("div.thumb img").unwrap();
     let image_url = document
@@ -102,16 +112,25 @@ pub async fn scrape_manga_thai_manga(
     let html = response.text().await?;
     let document = Html::parse_document(&html);
 
-    // Extract title
-    let title_selector = Selector::parse("h1.entry-title").unwrap();
+    // Extract title: try h1.entry-title, then og:title, then any h1
     let title = document
-        .select(&title_selector)
+        .select(&Selector::parse("h1.entry-title").unwrap())
         .next()
-        .ok_or("ไม่พบชื่อการ์ตูน")?
-        .text()
-        .collect::<String>()
-        .trim()
-        .to_string();
+        .map(|el| el.text().collect::<String>().trim().to_string())
+        .or_else(|| {
+            document
+                .select(&Selector::parse(r##"meta[property="og:title"]"##).unwrap())
+                .next()
+                .and_then(|el| el.value().attr("content").map(String::from))
+        })
+        .or_else(|| {
+            document
+                .select(&Selector::parse("h1").unwrap())
+                .next()
+                .map(|el| el.text().collect::<String>().trim().to_string())
+        })
+        .filter(|s| !s.is_empty())
+        .ok_or("ไม่พบชื่อการ์ตูน")?;
 
     // Extract image URL
     let image_selector = Selector::parse("div.thumb img").unwrap();
